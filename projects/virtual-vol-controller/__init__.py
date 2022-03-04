@@ -54,11 +54,6 @@ while True:
     volume.GetVolumeRange()
     volume.SetMasterVolumeLevel(-20.0, None)
 
-
-
- sidf
-
-
     ctime = time.time()
     fps = 1 / (ctime - ptime)
     ptime = ctime
