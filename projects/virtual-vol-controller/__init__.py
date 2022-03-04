@@ -8,7 +8,9 @@ from handTracker import  handDetector
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-
+vol =0
+volBar =400
+volPer = 0
 ####################
 wCam , hCam  =1280 ,720
 ##################
@@ -18,6 +20,11 @@ cap = cv2.VideoCapture(0)
 cap.set(3, wCam)
 cap.set(4, hCam)
 ptime =0
+
+devices = AudioUtilities.GetSpeakers()
+interface = devices.Activate(
+    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+volume = cast(interface, POINTER(IAudioEndpointVolume))
 while True:
     sucess, img = cap.read()
     img = detector.find_hands(img=img, draw=False)
@@ -40,20 +47,44 @@ while True:
         print(f'Length between the 2 points is {length}')
         if length< 50:
           cv2.circle(img=img, center=(cx, cy), radius=5, color=(247, 146, 146), thickness=10, lineType=cv2.FILLED)
-        elif length>200:
+        elif length>150:
             cv2.circle(img=img, center=(cx, cy), radius=5, color=(84, 228, 17), thickness=10, lineType=cv2.FILLED)
+
+
+
 ######################################
 #     CHANGE THE VOLUME BASED ON THE LENGTH
 #####################################
-    devices = AudioUtilities.GetSpeakers()
-    interface = devices.Activate(
-        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    volume = cast(interface, POINTER(IAudioEndpointVolume))
-    # volume.GetMute()
-    # volume.GetMasterVolumeLevel()
-    volume.GetVolumeRange()
-    volume.SetMasterVolumeLevel(-20.0, None)
 
+        # volume.GetMute()
+        # volume.GetMasterVolumeLevel()
+        # volume.SetMasterVolumeLevel(-20.0, None)
+        volRange =volume.GetVolumeRange()
+        minVol = volRange[0]  # -65.25
+        maxVol = volRange[1] # 0
+
+        # print(volume.GetVolumeRange())
+        # sample Range :
+        # (-65.25, 0.0, 0.03125)
+        # -65 - minimum volume
+        # 0 - maximun volume
+
+        # HAND RANGE = 50 - 300
+        # VOLUME RANGE  = -65- 0
+        # print(f'Min {minVol} ||| , {maxVol}')
+        # print(f'Min {type(minVol)} ||| , {type(maxVol)}')
+        # print(f'Min {type(50.00)} ||| , {type(300)}')
+
+        vol = np.interp(length ,[50.00 , 150.00], [ minVol , maxVol] )
+        volBar = np.interp(length ,[50.00 , 150.00], [ 400 , 150] )
+        volPer = np.interp(length ,[50.00 , 150.00], [ 0 , 100] )
+        # print1
+        cv2.putText(img,  str(int(volPer))+"%", (40, 450), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 5)
+
+        volume.SetMasterVolumeLevel(vol,None) # change the volume
+
+    cv2.rectangle(img , (50,150), (85,400 ), (0,255,0), 3)
+    cv2.rectangle(img , (50,150), (85,int(volBar)), (255,0, 0 ), 3, cv2.FILLED)
     ctime = time.time()
     fps = 1 / (ctime - ptime)
     ptime = ctime
